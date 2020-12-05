@@ -1,22 +1,32 @@
 import {getFilePath, readLines} from "./fetchFile.js";
 
-const splitOnLowerHalfSpecification = (lowerHalfSpecification) => {
-    const split = (s, range) => {
-        if (!s) {
-            return range.min;
+const lowerHalf = (possibleRows) => {
+    return possibleRows.slice(0, Math.ceil(possibleRows.length / 2));
+}
+const upperHalf = (possibleRows) => {
+    return possibleRows.slice(-Math.ceil(possibleRows.length / 2));
+}
+
+const isInLowerHalfWhenStartingWith = lowerHalfSpecification => (s) => s.charAt(0) === lowerHalfSpecification;
+
+const splitOnLowerHalfSpecification = (indicatedLowerHalf) => {
+    const split = (s, possibleRows) => {
+        if (possibleRows.length === 1) {
+            return possibleRows[0];
         }
 
-        const x = (range.max - range.min) / 2;
-        if (s.charAt(0) === lowerHalfSpecification) {
-            return split(s.slice(1), {min: range.min, max: range.min + Math.floor(x)});
+        if (indicatedLowerHalf(s)) {
+            return split(s.slice(1), lowerHalf(possibleRows));
         } else {
-            return split(s.slice(1), {min: range.min + Math.ceil(x), max: range.max});
+            return split(s.slice(1), upperHalf(possibleRows));
         }
     };
-    return split;
+    return (s, amount) => {
+        return split(s, Array.from(Array(amount).keys()))
+    };
 };
-const parseRow = s => splitOnLowerHalfSpecification('F')(s, {min: 0, max: 127});
-const parseColumn = s => splitOnLowerHalfSpecification('L')(s, {min: 0, max: 7});
+const parseRow = s => splitOnLowerHalfSpecification(isInLowerHalfWhenStartingWith(('F')))(s, 128);
+const parseColumn = s => splitOnLowerHalfSpecification(isInLowerHalfWhenStartingWith('L'))(s, 8);
 
 const parseSeatId = s => {
     const row = parseRow(s.slice(0, 7));
