@@ -2,7 +2,7 @@ import {getFilePath, readLines} from "./fetchFile.js";
 import * as fs from "fs";
 import readline from 'readline';
 
-const  filterPossibilities = (sum) => (value, arr) => {
+const filterPossibilities = (sum) => (value, arr) => {
     return arr.filter(a => a + value === sum);
 }
 
@@ -13,7 +13,7 @@ const  filterPossibilities = (sum) => (value, arr) => {
     const reducer = ((tuples, current, index, lines) => {
         const matches = filterPossibilities(2020)(current, lines.slice(index + 1));
 
-        return  [...tuples, matches.map(match => ([current, match]))]
+        return [...tuples, matches.map(match => ([current, match]))]
     });
 
     const tuples = lines.map(l => parseInt(l, 10))

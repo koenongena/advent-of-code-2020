@@ -1,6 +1,9 @@
 import fetch from "node-fetch";
 import fs from "fs";
 import readline from "readline";
+import dotenv from 'dotenv';
+
+dotenv.config()
 
 export const getFilePath = async (day) => {
     const filePath = `./day${day}.txt`;
