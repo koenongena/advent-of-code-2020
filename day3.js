@@ -32,18 +32,25 @@ const outsideOfForest = (forest) => location => {
 
 const countTreeCollisionsInForest = (forest) => {
     const getSquare = getSquareOnBiomeStableForest(forest);
-    const move = moveOnBoard(getSquare);
-    const inForest = inFixedHeightForest(forest);
 
+    const findLocations = (slope) => {
+        const move = moveOnBoard(getSquare);
+        const inForest = inFixedHeightForest(forest);
+
+        return (currentLocation) => {
+            const newLocation = move(slope.right, slope.down, currentLocation);
+            if (inForest(newLocation)) {
+                return [newLocation, ...findLocations(slope)(newLocation)];
+            }
+            return [];
+        };
+    };
     return (slope) => {
-        let location = getSquare(0, 0);
-        let count = 0;
-        do {
-            count += isTree(location);
-            location = move(slope.right, slope.down, location);
-        } while (inForest(location))
-        console.log("Landed on", count, ' trees with slope', slope);
-        return count;
+        const findLocationWithSlope = findLocations(slope);
+
+        return findLocationWithSlope(getSquare(0, 0))
+            .filter(location => isTree(location))
+            .length;
     };
 };
 
