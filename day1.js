@@ -1,15 +1,10 @@
 import {getFilePath, readLines} from "./fetchFile.js";
 
-const filterPossibilities = (sum) => (value, arr) => {
-    return arr.filter(a => a + value === sum);
-}
-
-
 const findTuplesWithSum = (sum = 2020) => numbers => {
-    const reducer = ((tuples, current, index, lines) => {
-
-        const matches = filterPossibilities(sum)(current, lines.slice(index + 1));
-        return [...tuples, matches.map(match => ([current, match]))]
+    const reducer = ((tuples, current, index) => {
+        const tail = numbers.slice(index + 1);
+        const equalsSum = tail.filter(t => t + current === sum);
+        return [...tuples, equalsSum.map(match => ([current, match]))]
 
     });
     return numbers
@@ -31,7 +26,6 @@ const findTripletsWithSum = (sum) => numbers => numbers.sort()
 (async () => {
     const filePath = await getFilePath(1);
     const lines = await readLines(filePath);
-
     const numbers = lines.map(l => parseInt(l, 10));
 
     const tuples = findTuplesWithSum(2020)(numbers);
