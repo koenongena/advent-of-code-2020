@@ -25,8 +25,21 @@ const parseSeatId = s => {
     return row * 8 + col;
 };
 
+const missingSeatsWithNeighbours = (acc, currentValue, index, arr) => {
+    if (currentValue - arr[index - 1] === 2) {
+        return [...acc, currentValue - 1];
+    }
+    return acc;
+};
+
 (async () => {
     const lines = await readLines(await getFilePath(5));
     const seatIds = lines.map(parseSeatId);
-    console.log(Math.max(...seatIds));
+    console.log("Highest seat ID:", Math.max(...seatIds));
+
+    const missingSeats = seatIds
+        .sort()
+        .reduce(missingSeatsWithNeighbours, []);
+
+    console.log("Missing seat:", ...missingSeats);
 })();
