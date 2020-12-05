@@ -1,0 +1,6 @@
+*.iml
+.idea/
+
+.env
+day*.txt
+node_modules/
