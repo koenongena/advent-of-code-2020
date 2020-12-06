@@ -1,6 +1,6 @@
-import {getFilePath, readLines} from "./fetchFile.js";
+import {getFilePath, readLines, readLinesForDay} from "./fetchFile.js";
+import {intersection} from "./utils/arrays.js";
 
-const intersection = (array1, array2) => array1.filter(value => (array2 || []).includes(value));
 const parseGroups = (acc, line) => {
     if (line === '') {
         return [...acc, {id: acc.length + 2, answers: []}]
@@ -32,7 +32,7 @@ const intersectAnswers = group => {
 
 
 (async () => {
-    const lines = await readLines(await getFilePath(6));
+    const lines = await readLinesForDay(6);
     const groups = lines.reduce(parseGroups, [{id: 1, answers: []}]);
 
     const sumOfCounts = groups.map(combineAnswers)

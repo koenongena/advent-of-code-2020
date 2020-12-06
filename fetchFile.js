@@ -46,5 +46,8 @@ export const readLines = (filePath) => {
             resolve(lines);
         });
     });
+}
 
+export const readLinesForDay = async (day) => {
+    return await readLines(await getFilePath(day));
 }

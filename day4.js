@@ -1,8 +1,5 @@
 import {getFilePath, readLines} from "./fetchFile.js";
-
-const intersection = (array1, array2) => array1.filter(value => array2.includes(value));
-
-const containsAll = (requiredFields) => (arr) => intersection(requiredFields, arr).length === requiredFields.length;
+import {containsAll} from "./utils/arrays.js";
 
 function parsePassports(lines) {
     return lines.reduce((acc, line) => {
