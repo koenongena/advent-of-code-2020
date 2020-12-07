@@ -1,6 +1,6 @@
 import {readLinesForDay} from "./fetchFile.js";
 import DirectedGraph from "graph-data-structure";
-import {contains, containsAll, containsAny} from "./utils/arrays.js";
+import {containsAny} from "./utils/arrays.js";
 
 const parseBagCanContain = (s) => {
     const bags = s.split(',').map(s => s.trim());
@@ -17,36 +17,46 @@ const parseBagCanContain = (s) => {
         }
     });
 }
+
+const reduceBagsSpecificationToGraph = (graph, l) => {
+    const matches = l.match(new RegExp("(.*) bags contain (.*)\."));
+    const node = matches[1];
+    const edges = parseBagCanContain(matches[2]);
+
+    graph.addNode(node);
+    edges.forEach((edge) => {
+        graph.addNode(edge.bag);
+        graph.addEdge(node, edge.bag, edge.amount);
+    })
+    return graph;
+};
+
+const incomingNodesFor = (graph) => (nodeIds) => {
+    return graph.nodes().filter(n => {
+        return containsAny(nodeIds)(graph.adjacent(n));
+    })
+}
+
+const recursive = (acc, findIncoming) => (targetNodes) => {
+    const sourceNodes = findIncoming(targetNodes)
+    if (sourceNodes.length > 0) {
+        return recursive(new Set([...acc, ...sourceNodes]), findIncoming)(sourceNodes);
+    }
+
+    return acc;
+}
+
+const findAllIncomingNodes = (graph) => {
+    const findIncoming = incomingNodesFor(graph);
+    return recursive(new Set(), findIncoming);
+};
+
 (async () => {
     const lines = await readLinesForDay(7);
 
-    const graph = lines.map(l => {
-        const matches = l.match(new RegExp("(.*) bags contain (.*)\."));
-        const node = matches[1];
-        const edges = parseBagCanContain(matches[2]);
-        return {node: node, edges: edges };
-    }).reduce((graph, bla) => {
-        graph.addNode(bla.node);
-        bla.edges.forEach((edge) => {
-            graph.addNode(edge.bag);
-            graph.addEdge(bla.node, edge.bag, edge.amount);
-        })
-        return graph;
+    const graph = lines.reduce(reduceBagsSpecificationToGraph, new DirectedGraph())
 
-    }, new DirectedGraph())
-
-    const to = (nodeIds) => {
-        return graph.nodes().filter(n => {
-            return containsAny(nodeIds)(graph.adjacent(n));
-        })
-    }
-
-    let toShinyGold = to(['shiny gold'])
-    const set = new Set();
-    while (toShinyGold.length) {
-        toShinyGold.forEach(t => set.add(t));
-        toShinyGold = to(toShinyGold);
-    }
+    const set = findAllIncomingNodes(graph)(['shiny gold'])
 
     console.log(set.size);
 })();
