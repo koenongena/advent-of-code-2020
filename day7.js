@@ -12,7 +12,7 @@ const parseBagCanContain = (s) => {
         }
         const bs = b.match(new RegExp("([0-9]+) (.*) bag"));
         return {
-            amount: bs[1],
+            amount: parseInt(bs[1], 10),
             bag: bs[2].trim()
         }
     });
@@ -51,6 +51,21 @@ const findAllIncomingNodes = (graph) => {
     return recursive(new Set(), findIncoming);
 };
 
+const getContainedInBagCount = (graph) => {
+    const countChildBags = (nodeId) => {
+        const childBags = graph.adjacent(nodeId);
+        if (childBags.length) {
+            return childBags.reduce((sum, child) => {
+                const childCount = graph.getEdgeWeight(nodeId, child);
+                return sum + childCount + childCount * countChildBags(child);
+            }, 0)
+        } else {
+            return 0;
+        }
+
+    };
+    return countChildBags;
+}
 (async () => {
     const lines = await readLinesForDay(7);
 
@@ -59,4 +74,6 @@ const findAllIncomingNodes = (graph) => {
     const set = findAllIncomingNodes(graph)(['shiny gold'])
 
     console.log(set.size);
+
+    console.log(getContainedInBagCount(graph)("shiny gold"));
 })();
