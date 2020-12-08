@@ -1,12 +1,11 @@
 import {readLinesForDay} from "./fetchFile.js";
-import {contains} from "./utils/arrays.js";
 
 const hasBeenExecuted = (previousExecutions, execution) => {
     return previousExecutions.some(e => e.position === execution.position);
 }
 
 function parseOperation(operation) {
-    if (!operation) {
+    if (!(operation || "")) {
         return 0;
     }
     if (operation.trim().startsWith("+")) {
@@ -16,7 +15,7 @@ function parseOperation(operation) {
 }
 
 const execute = (state, execution) => {
-    if (execution.instruction === 'nop'){
+    if (execution.instruction === 'nop') {
         return {
             acc: state.acc,
             position: state.position + 1,
@@ -49,18 +48,48 @@ const reduce = (executions) => {
         }
 
         const newState = execute(state, execution);
-        const nextExecution = executions[newState.position];
-        return reduceMe(newState, nextExecution)
+        if (newState.position >= executions.length) {
+            return {
+                finished: true,
+                ...newState
+            };
+        } else {
+            const nextExecution = executions[newState.position];
+            return reduceMe(newState, nextExecution)
+        }
     }
     return reduceMe({position: 0, acc: 0, previousExecutions: []}, executions[0]);
 }
 
+function replaceJump(executions, line) {
+    const execution = executions[line];
+    return [...executions.slice(0, line), {...execution, instruction: 'nop'}, ...executions.slice(line + 1)];
+}
+
 (async () => {
     const lines = await readLinesForDay(8);
-    console.log(lines)
 
-    const executions = lines.map((l, index) => ({position: index, instruction: l.split(' ')[0], operation: l.split(' ')[1]}));
+    const executions = lines.map((l, index) => ({
+        position: index,
+        instruction: l.split(' ')[0],
+        operation: l.split(' ')[1]
+    }));
     const result = reduce(executions);
-    console.log(result);
+    console.log(result.acc, 'and', result.finished);
+
+    const jumps = lines
+        .map((l, index) => ({line: l, index}))
+        .filter((l) => {
+            return l.line.startsWith("jmp");
+        }).map(l => l.index);
+
+    const results = jumps.map((line) => {
+        const fixedExecutions = replaceJump(executions, line);
+        return reduce(fixedExecutions);
+    })
+        .filter(state => state.finished)
+        .map(state => state.acc);
+
+    console.log(results);
 
 })();
