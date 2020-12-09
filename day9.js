@@ -8,25 +8,20 @@ const filter2NumberCombinationWithSum = sum => (arr) => {
     }, []);
 };
 
-const dropUntilLessThan = s => (arr) => {
-    if (sum(arr) >= s) {
-        return dropUntilLessThan(s)(arr.slice(1));
+const dropIfMoreThan = s => (arr) => {
+    if (sum(arr) > s) {
+        return dropIfMoreThan(s)(arr.slice(1));
     }
     return arr;
 };
 
 const filterContinuousSetsWithSum = (s) => (arr) => {
     const cs = arr.reduce((continuousSet, v) => {
-        if (sum(continuousSet) === s && continuousSet.length > 1) {
+        if (sum(continuousSet) === s) {
             //ignore this value, we've found the set
             return continuousSet;
         }
-        const newSum = v + sum(continuousSet);
-        if (newSum <= s) {
-            return [...continuousSet, v];
-        } else {
-            return dropUntilLessThan(s)([...continuousSet, v]);
-        }
+        return dropIfMoreThan(s)([...continuousSet, v]);
     }, []);
 
     if (sum(cs) === s) {
