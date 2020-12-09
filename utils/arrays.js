@@ -5,3 +5,5 @@ export const containsAll = (requiredFields) => (arr) => intersection(requiredFie
 export const containsAny = (requiredFields) => (arr) => intersection(requiredFields, arr).length > 0;
 
 export const contains = (s) => (arr) => arr.some(a => a === s);
+
+export const last = (arr) => arr[arr.length - 1];
