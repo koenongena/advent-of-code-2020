@@ -1,18 +1,26 @@
 import * as R from "ramda";
 import {readLinesForDay} from "./fetchFile.js";
-import {adjacentCells} from "./utils/grids.js";
+import {adjacentCells, cellsInLineOfSight, coordinatesInLineOfSight} from "./utils/grids.js";
 
 const isOccupied = (seat) => {
     return seat === '#'
 };
 
+const isSeat = (seat) => {
+    return seat !== '.';
+}
+
 const occupiedSeats = (row) => R.length(R.filter(isOccupied, row));
 
+const adjacentSeatCoordinates = R.curry((grid, row, col) => {
+    return coordinatesInLineOfSight(grid, isSeat)(row, col);
+});
+
 const changeSeat = R.curry((grid, row, col, seat) => {
-    const occupiedAdjacentSeats = adjacentCells(grid, row, col).filter(isOccupied);
+    const occupiedAdjacentSeats = cellsInLineOfSight(grid, isSeat, row, col).filter(isOccupied);
     if (seat === 'L' && occupiedAdjacentSeats.length === 0) {
         return '#';
-    } else if (seat === '#' && occupiedAdjacentSeats.length >= 4) {
+    } else if (seat === '#' && occupiedAdjacentSeats.length >= 5) {
         return "L";
     }
     return seat;
@@ -51,5 +59,6 @@ function printGrid(grid) {
     const count = result.grid.reduce((sum, row) => {
         return sum + occupiedSeats(row);
     }, 0)
-    console.log(count)
+    console.log(count);
+
 })();
