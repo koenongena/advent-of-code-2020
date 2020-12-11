@@ -16,7 +16,7 @@ const adjacentSeatCoordinates = R.curry((grid, row, col) => {
     return coordinatesInLineOfSight(grid, isSeat)(row, col);
 });
 
-const changeSeat = R.curry((grid, row, col, seat) => {
+const changeSeatPart2 = R.curry((grid, row, col, seat) => {
     const occupiedAdjacentSeats = cellsInLineOfSight(grid, isSeat, row, col).filter(isOccupied);
     if (seat === 'L' && occupiedAdjacentSeats.length === 0) {
         return '#';
@@ -26,7 +26,21 @@ const changeSeat = R.curry((grid, row, col, seat) => {
     return seat;
 });
 
-const runRound = (grid) => {
+const changeSeatPart1 = (grid) => {
+
+    const adjacentSeats = adjacentCells(grid);
+    return R.curry((row, col, seat) => {
+        const occupiedAdjacentSeats = adjacentSeats(row, col).filter(isOccupied);
+        if (seat === 'L' && occupiedAdjacentSeats.length === 0) {
+            return '#';
+        } else if (seat === '#' && occupiedAdjacentSeats.length >= 4) {
+            return "L";
+        }
+        return seat;
+    });
+};
+
+const runRound = (changeSeat) => (grid) => {
     const changeRowAndColumn = changeSeat(grid);
     return grid.reduce((newRows, row, rowNumber) => {
         const changeRow = changeRowAndColumn(rowNumber);
@@ -50,15 +64,22 @@ function printGrid(grid) {
     const grid = lines.map(l => [...l]);
     // console.log(grid);
 
-    const isSameLayout = ({previousGrid, grid}) => {
-        return JSON.stringify(previousGrid) === JSON.stringify(grid);
-    }
-    const reducer = (input) => ({previousGrid: input.grid, grid: runRound(input.grid)});
-    const result = R.until(isSameLayout, reducer)(({previousGrid: null, grid}));
+    const countSettledOpenSeats = (handleSeat) => {
+        const round = runRound(handleSeat);
 
-    const count = result.grid.reduce((sum, row) => {
-        return sum + occupiedSeats(row);
-    }, 0)
-    console.log(count);
+        const isSameLayout = ({previousGrid, grid}) => {
+            return JSON.stringify(previousGrid) === JSON.stringify(grid);
+
+        }
+
+        const reducer = (input) => ({previousGrid: input.grid, grid: round(input.grid)});
+        const result = R.until(isSameLayout, reducer)(({previousGrid: null, grid}));
+
+        return result.grid.reduce((sum, row) => {
+            return sum + occupiedSeats(row);
+        }, 0);
+    }
+    console.log(countSettledOpenSeats(changeSeatPart1));
+    console.log(countSettledOpenSeats(changeSeatPart2));
 
 })();
