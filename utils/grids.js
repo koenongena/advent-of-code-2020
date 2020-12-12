@@ -58,3 +58,4 @@ export const cellsInLineOfSight = R.curry((grid, valuePredicate, row, col) => {
     const coordinatesInLineOfSight1 = coordinatesInLineOfSight(grid, valuePredicate, row, col);
     return R.map(extractGridValue(grid), coordinatesInLineOfSight1);
 });
+

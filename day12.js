@@ -1,35 +1,9 @@
 import {readLinesForDay} from "./fetchFile.js";
-import * as R from 'ramda';
+import R from 'ramda';
+import {rotateClockwiseAroundCenter, rotateCounterClockwiseAroundCenter} from "./utils/points.js";
+import {rotateGeographicDirectionClockwise, rotateGeographicDirectionCounterClockwise} from "./utils/compass.js";
 
-const rotateClockwise = (facing, amount) => {
-    if (amount === 0) {
-        return facing;
-    } else if (amount < 0) {
-        rotateCounterClockwise(facing, -1 * amount);
-    } else if (amount === 90) {
-        switch (facing) {
-            case 'N':
-                return 'E';
-            case 'E':
-                return 'S';
-            case 'S':
-                return 'W';
-            case 'W':
-                return 'N'
-        }
-    }
-
-    return rotateClockwise(rotateClockwise(facing, 90), amount - 90)
-};
-
-function rotateCounterClockwise(facing, amount) {
-    if (amount < 0) {
-        return rotateClockwise(-1 * amount);
-    }
-    return rotateClockwise(facing, 360 - amount);
-}
-
-const handleAction = (s, position) => {
+const handleBasicAction = (position, s) => {
     const action = [...s][0];
     const amount = parseInt(s.substring(1), 10);
 
@@ -57,18 +31,80 @@ const handleAction = (s, position) => {
         case 'L':
             return {
                 ...position,
-                facing: rotateCounterClockwise(position.facing, amount)
+                facing: rotateGeographicDirectionClockwise(position.facing, amount)
             }
         case 'R':
             return {
                 ...position,
-                facing: rotateClockwise(position.facing, amount)
+                facing: rotateGeographicDirectionCounterClockwise(position.facing, amount)
             }
 
         case 'F':
-            return handleAction(position.facing + amount, position);
+            return handleBasicAction(position, position.facing + amount);
     }
 }
+
+function computeDirection(shipPosition, waypointPosition) {
+    const determineNorthSouth = () => {
+        if (shipPosition.y > waypointPosition.y) {
+            return 'S'
+        }
+        return 'N'
+
+    }
+
+    const determineEastWest = () => {
+        if (shipPosition.x > waypointPosition.x) {
+            return 'W'
+        }
+        return 'E';
+    }
+    return {horizontal: determineEastWest(), vertical: determineNorthSouth()};
+}
+
+const handleShipAndWaypointAction = (s, positions) => {
+    const {shipPosition, waypointPosition} = positions;
+
+    const action = [...s][0];
+    const amount = parseInt(s.substring(1), 10);
+
+    switch (action) {
+        case 'N':
+        case 'S':
+        case 'E':
+        case 'W':
+            return {
+                shipPosition: shipPosition,
+                waypointPosition: handleBasicAction(waypointPosition, s)
+            };
+        case 'L':
+            return {
+                shipPosition: shipPosition,
+                waypointPosition: rotateCounterClockwiseAroundCenter(shipPosition)(waypointPosition, amount)
+            }
+        case 'R':
+            return {
+                shipPosition: shipPosition,
+                waypointPosition: rotateClockwiseAroundCenter(shipPosition)(waypointPosition, amount)
+            }
+
+        case 'F':
+            const shipDirection = computeDirection(shipPosition, waypointPosition);
+            const horizontalMove = Math.abs(shipPosition.x - waypointPosition.x) * amount;
+            const verticalMove = Math.abs(shipPosition.y - waypointPosition.y) * amount;
+
+            const doubleMove = (position) => {
+                const positionAfterFirstMove = handleBasicAction(position, shipDirection.horizontal + '' + horizontalMove);
+                const positionAfterSecondMove = handleBasicAction(positionAfterFirstMove, shipDirection.vertical + '' + verticalMove);
+                return positionAfterSecondMove;
+            }
+
+            return {
+                shipPosition: doubleMove(shipPosition),
+                waypointPosition: doubleMove(waypointPosition)
+            };
+    }
+};
 
 const manhattanDistance = (position) => {
     return Math.abs(position.x) + Math.abs(position.y);
@@ -76,12 +112,18 @@ const manhattanDistance = (position) => {
 (async () => {
     const lines = await readLinesForDay(12);
 
-    const result = lines.reduce((acc, line) => {
-        console.log(acc);
-        return handleAction(line, acc);
-    }, {facing: 'E', x: 0, y: 0})
+    const baseShipPosition = {facing: 'E', x: 0, y: 0};
+    const baseWaypointPosition = {facing: 'E', x: baseShipPosition.x + 10, y: baseShipPosition.y + 1};
+    const result = R.reduce((acc, line) => {
+        return handleBasicAction(acc, line);
+    }, baseShipPosition, lines);
 
     console.log(manhattanDistance(result));
 
+    const result2 = R.reduce((acc, line) => {
+        return handleShipAndWaypointAction(line, acc);
+    }, {shipPosition: baseShipPosition, waypointPosition: baseWaypointPosition}, lines);
+
+    console.log(manhattanDistance(result2.shipPosition));
 
 })();
