@@ -29,3 +29,7 @@ export const rotateCounterClockwiseAroundCenter = R.curry((center, point, rotati
     }
     return rotateClockwise(360 - rotation);
 });
+
+export const manhattanDistance = (position) => {
+    return Math.abs(position.x) + Math.abs(position.y);
+}
