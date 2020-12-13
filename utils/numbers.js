@@ -1,0 +1,1 @@
+export const parseInteger = s => parseInt(s, 10);
