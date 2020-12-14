@@ -1,7 +1,6 @@
 import {readLinesForDay} from "./fetchFile.js";
 import R from 'ramda';
 import {parseInteger} from "./utils/numbers.js";
-import {first} from "./utils/arrays.js";
 import {leastCommonDenominator} from "./utils/math.js";
 
 const timeUntilNextBus = R.curry((timestamp, bus) => {
@@ -40,20 +39,21 @@ const mapIndexed = R.addIndex(R.map());
     //part 2
     console.log(busses);
 
-    const busWithLongestRoute = R.last(R.sortBy(R.prop("bus"), busses));
+    const findMatches = (timestamp, outOfSyncBusses, inSyncBusses) => {
+        if (outOfSyncBusses.length === 0) {
+            return timestamp;
+        }
 
-    let timestamp = -busWithLongestRoute.index;
-    const smallestDifference = busWithLongestRoute.bus;
-    console.log("Difference: %s", smallestDifference);
-    const matches = R.allPass(busses.map(b => isValid(b)));
-    while (!matches(timestamp)) {
-        // console.log("Validating %s", timestamp);
-        timestamp += smallestDifference;
-    }
-    console.log(timestamp);
+        const currentBus = outOfSyncBusses[0]
+        //We can use an increment = least common denominator of busses that are already "in sync"
+        const increment = inSyncBusses.length ? leastCommonDenominator(R.map(R.prop("bus"), inSyncBusses)) : 1;
+        console.log("Starting at: %s", timestamp);
+        console.log("Using increment: %s", increment);
+        while (!isValid(currentBus)(timestamp)) {
+            timestamp += increment;
+        }
+        return findMatches(timestamp, R.tail(outOfSyncBusses), [...inSyncBusses, outOfSyncBusses[0]]);
+    };
 
-    //wolfram alpha: solve ((t + 0) mod 29) = 0 and ((t + 23) mod 37) = 0 and ((t + 29) mod 467) = 0 and ((t + 37) mod 23) = 0 and ((t + 42) mod 13) = 0 and ((t + 46) mod 17) = 0 and ((t + 48) mod 19) = 0 and ((t + 60) mod 443) = 0 and ((t + 101) mod 41) = 0 for t
-
-    //t = 11525093 n + 1584502, n element Z
-    //t = 76266437 n + 25664259, n element Z
+    console.log(findMatches(0, busses, []));
 })();
