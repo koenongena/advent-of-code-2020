@@ -1,53 +1,21 @@
 import {readLinesForDay} from "./fetchFile.js";
 import R from 'ramda';
 
-const addNumber = (previousNumbers) => {
-    const lastSpoken = R.last(previousNumbers);
-    const lastSpokenIndex = previousNumbers.length - 1;
-    const beforeLast = R.dropLast(1, previousNumbers);
-    const previouslySpokenIndex = R.findLastIndex(v => v === lastSpoken, beforeLast);
+const addNumber = ({indexes, lastSpoken, turn}) => {
+    let newNumber = 0;
 
-    if (previouslySpokenIndex < 0) {
-        return [...previousNumbers, 0];
+    if (indexes.has(lastSpoken)) {
+        const lastSpokenIndex = indexes.get(lastSpoken);
+        newNumber = (turn - 1) - lastSpokenIndex;
     }
-    return [...previousNumbers, lastSpokenIndex - previouslySpokenIndex];
+    indexes.set(lastSpoken, turn - 1);
+    return {indexes, lastSpoken: newNumber, turn: turn + 1};
 }
 
-function findIndexOfValueBefore(turn, value) {
-    // console.log("Finding value %s before turn %s", value, turn);
-    if (turn < 1) {
-        return 0;
-    }
-    if (valueAtTurn(turn - 1) === value) {
-        return turn - 1;
-    }
-    return findIndexOfValueBefore(turn - 1, value);
-}
-
-const turns = new Array(2021);
-console.log(turns);
-const valueAtTurn = (turn) => {
-    // console.log("Requesting value at turn %s", turn);
-    if (turns[turn] !== undefined) {
-        // console.log(turns)
-        return turns[turn];
-    }
-    if (turn < 1) {
-        return undefined;
-    }
-    if (turn <= 3) {
-        return [0, 3, 6][turn - 1];
-    }
-    const previousValue = valueAtTurn(turn - 1);
-    const previousTurn = findIndexOfValueBefore(turn - 1, previousValue);
-    if (previousTurn < 1) {
-        turns[turn] = 0;
-        return 0;
-    } else {
-        turns[turn] = (turn - 1) - previousTurn;
-        return (turn - 1) - previousTurn;
-    }
-}
+const createPreviousSpokenMap = input => R.dropLast(1, input).reduce((m, currentValue, currentIndex) => {
+    m.set(currentValue, currentIndex + 1)
+    return m;
+}, new Map());
 
 (async () => {
     const lines = await readLinesForDay(15);
@@ -55,18 +23,21 @@ const valueAtTurn = (turn) => {
     const input = lines[0].split(',').map(v => parseInt(v, 10));
 
     console.log(input)
-    const lessThan = R.curry((count, acc) => acc.length >= count);
+    const moreThan = count => ({turn}) => turn > count;
 
-    // const part1 = R.until(lessThan(2020), addNumber, [0, 3, 6]);
-    // const part1 = R.until(lessThan(2020), addNumber, [1,3,2]);
-    // const part1 = R.until(lessThan(2020), addNumber, [3,1,2]);
-    // const part1 = R.until(lessThan(2020), addNumber, input);
+    const lastSpoken = R.last(input);
 
-    const part1 = R.until(lessThan(2020), addNumber, [0,3,6]);
-    console.log(R.last(part1));
+    const part1 = R.until(moreThan(2020), addNumber, {
+        indexes: createPreviousSpokenMap(input),
+        lastSpoken,
+        turn: input.length + 1
+    });
+    console.log(part1.lastSpoken);
 
-    //number at 2000 = distance between number at 1999 and previous number at ?
-    //number at x = distance between number at (x - 1) and findNumber where index < x
-
-    console.log(valueAtTurn(2020))
+    const part2 = R.until(moreThan(30000000), addNumber, {
+        indexes: createPreviousSpokenMap(input),
+        lastSpoken,
+        turn: input.length + 1
+    });
+    console.log(part2.lastSpoken);
 })();
