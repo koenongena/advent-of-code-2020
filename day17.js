@@ -115,22 +115,21 @@ const countActive = cubes => {
 
 (async () => {
     const lines = await readLinesForDay(17);
-    const grid = lines.reduce(parseLine, [])
+    let grid = lines.reduce(parseLine, [])
         .reduce((m, cube) => {
             m.set(formatCoordinate(cube.coordinate), cube);
             return m;
         }, new Map());
 
-    let newGrid = grid;
     R.range(1, 7).forEach((cycle) => {
-        newGrid = executeCycle(newGrid, cycle)
+        grid = executeCycle(grid, cycle)
         console.log(`Cycle ${cycle} done`);
         // printGrid(newGrid)
     })
 
     // printGrid(newGrid);
 
-    console.log(countActive(newGrid));
+    console.log(countActive(grid));
 
 
 })();
