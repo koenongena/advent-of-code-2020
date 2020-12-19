@@ -33,7 +33,7 @@ const parseLine = (coordinates, line, y) => {
     const cells = [...line];
     const lineCoordinates = cells.reduce(((acc, cell, x) => {
         return [...acc, {
-            coordinate: {x, y: -y, z: 0},
+            coordinate: {x, y: y === 0 ? 0 : -y, z: 0},
             active: (cell === '#')
         }]
     }), []);
@@ -49,15 +49,16 @@ const getNeighboursCoordinates = ({x, y, z}) => {
     return R.map(toCoordinate, R.reject(center, xyz));
 }
 
-const equalCoordinate = R.curry((a, b) => a.x === b.x && a.y === b.y && a.z === b.z);
+const formatCoordinate = (coord) => {
+    const {x, y, z} = coord;
+    return `(${x},${y},${z})`
+};
 
 const nextState = R.curry((grid, cube) => {
-    console.time("Single cube");
     const neighbourCellsCoordinates = getNeighboursCoordinates(cube.coordinate);
     const neighbours = neighbourCellsCoordinates.reduce((neighbours, coord) => {
-        const neighbour = R.find(R.pipe(R.prop("coordinate"), equalCoordinate(coord)), grid);
-        if (neighbour) {
-            return [...neighbours, neighbour];
+        if (grid.has(formatCoordinate(coord))) {
+            return [...neighbours, grid.get(formatCoordinate(coord))];
         }
         return neighbours;
     }, []);
@@ -77,41 +78,54 @@ const nextState = R.curry((grid, cube) => {
 });
 
 function isActive(grid, coord) {
-    const cube = R.find(R.pipe(R.prop("coordinate"), equalCoordinate(coord)), grid);
-    if (cube) {
-        return cube.active;
+    if (grid.has(formatCoordinate(coord))) {
+        return grid.get(formatCoordinate(coord)).active;
     }
     return false;
 }
 
 const minXYZ = R.curry((prop, grid) => {
-    return Math.min(...grid.map(R.pipe(R.prop("coordinate"), R.prop(prop))));
+    const bla = Array.from(grid.values()).map(R.pipe(R.prop("coordinate"), R.prop(prop)));
+    return Math.min(...bla);
 });
 
 const maxXYZ = R.curry((prop, grid) => {
-    return Math.max(...grid.map(R.pipe(R.prop("coordinate"), R.prop(prop))));
+    const bla = Array.from(grid.values()).map(R.pipe(R.prop("coordinate"), R.prop(prop)));
+    return Math.max(...bla);
 });
-const executeCycle = (grid, cycle) => {
-    const newGrid = [];
-    for (let z = minXYZ("z", grid) - 1; z <= maxXYZ("z", grid) + 1; z++) {
-        for (let y = minXYZ("y", grid) - 1; y <= maxXYZ("y", grid) + 1; y++) {
-            for (let x = minXYZ("x", grid) - 1; x <= maxXYZ("x", grid) + 1; x++) {
+const executeCycle = (grid) => {
+
+    const newGrid = new Map();
+    const maxZ = maxXYZ("z", grid) + 1;
+    const maxY = maxXYZ("y", grid) + 1;
+    const maxX = maxXYZ("x", grid) + 1;
+
+    for (let z = minXYZ("z", grid) - 1; z <= maxZ; z++) {
+        for (let y = minXYZ("y", grid) - 1; y <= maxY; y++) {
+            for (let x = minXYZ("x", grid) - 1; x <= maxX; x++) {
                 const cube = {
                     coordinate: {x, y, z},
                     active: isActive(grid, {x, y, z})
                 }
-                newGrid.push(nextState(grid, cube));
+                newGrid.set(formatCoordinate({x, y, z}), nextState(grid, cube));
             }
         }
     }
     return newGrid;
 };
 
-const countActive = grid => R.length(R.filter(R.prop("active"), grid));
+const countActive = grid => {
+    const from = Array.from(grid.values());
+    return R.length(R.filter(R.prop("active"), from));
+};
 
 (async () => {
     const lines = await readLinesForDay(17);
     const grid = lines.reduce(parseLine, [])
+        .reduce((m, cube) => {
+            m.set(formatCoordinate(cube.coordinate), cube);
+            return m;
+        }, new Map());
 
     let newGrid = grid;
     R.range(1, 7).forEach((cycle) => {
@@ -120,7 +134,7 @@ const countActive = grid => R.length(R.filter(R.prop("active"), grid));
         // printGrid(newGrid)
     })
 
-    printGrid(newGrid);
+    // printGrid(newGrid);
 
     console.log(countActive(newGrid));
 
