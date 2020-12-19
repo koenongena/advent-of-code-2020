@@ -59,7 +59,7 @@ const nextState = R.curry((grid, cube) => {
     const neighbourCellsCoordinates = getNeighboursCoordinates(cube.coordinate);
     const neighbours = neighbourCellsCoordinates.reduce((neighbours, coord) => {
         if (grid.has(formatCoordinate(coord))) {
-            return [...neighbours, grid.get(formatCoordinate(coord))];
+            return neighbours.concat(grid.get(formatCoordinate(coord)));
         }
         return neighbours;
     }, []);
@@ -85,42 +85,31 @@ function isActive(grid, coord) {
     return false;
 }
 
-const minXYZ = R.curry((prop, grid) => {
-    const bla = Array.from(grid.values()).map(R.pipe(R.prop("coordinate"), R.prop(prop)));
-    return Math.min(...bla);
-});
-
-const maxXYZ = R.curry((prop, grid) => {
-    const bla = Array.from(grid.values()).map(R.pipe(R.prop("coordinate"), R.prop(prop)));
-    return Math.max(...bla);
-});
 const executeCycle = (grid) => {
 
+    const activeCells = R.filter(R.prop("active"), Array.from(grid.values()));
+    const activeCoordinates = R.map(R.prop("coordinate"), activeCells);
+    const neighbouringCoordinates = R.flatten(R.map(getNeighboursCoordinates, activeCoordinates));
+
+    const toInvestigate = [...activeCoordinates, ...neighbouringCoordinates];
+
     const newGrid = new Map();
-    const maxZ = maxXYZ("z", grid) + 1;
-    const maxY = maxXYZ("y", grid) + 1;
-    const maxX = maxXYZ("x", grid) + 1;
-    const maxW = maxXYZ("w", grid) + 1;
-
-
-    for (let w = minXYZ("w", grid) - 1; w <= maxW; w++) {
-        for (let z = minXYZ("z", grid) - 1; z <= maxZ; z++) {
-            for (let y = minXYZ("y", grid) - 1; y <= maxY; y++) {
-                for (let x = minXYZ("x", grid) - 1; x <= maxX; x++) {
-                    const cube = {
-                        coordinate: {x, y, z, w},
-                        active: isActive(grid, {x, y, z, w})
-                    }
-                    newGrid.set(formatCoordinate({x, y, z, w}), nextState(grid, cube));
-                }
-            }
+    toInvestigate.forEach((coord) => {
+        const cube = {
+            coordinate: coord,
+            active: isActive(grid, coord)
         }
-    }
+        const next = nextState(grid, cube);
+        if (next.active) {
+            newGrid.set(formatCoordinate(coord), next);
+        }
+    });
+
     return newGrid;
 };
 
-const countActive = grid => {
-    const from = Array.from(grid.values());
+const countActive = cubes => {
+    const from = Array.from(cubes.values());
     return R.length(R.filter(R.prop("active"), from));
 };
 
@@ -135,7 +124,7 @@ const countActive = grid => {
     let newGrid = grid;
     R.range(1, 7).forEach((cycle) => {
         newGrid = executeCycle(newGrid, cycle)
-        console.log("After cycle " + cycle);
+        console.log(`Cycle ${cycle} done`);
         // printGrid(newGrid)
     })
 
