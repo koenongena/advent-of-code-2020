@@ -36,8 +36,19 @@ function takeOperation(s) {
 }
 
 function evaluateExpression(s) {
-    console.log("Evaluating " + s);
-    const { number: firstOperand, remaining } = takeNumber(s.trim());
+
+    const firstBracket = s.indexOf('(');
+    if (firstBracket >= 0) {
+        const endBracket = firstBracket + findEndBracketBracketIndex(s.substring(firstBracket + 1));
+        const firstParentheses = evaluateExpression(s.substring(firstBracket + 1, endBracket));
+        return evaluateExpression(s.substring(0, firstBracket) + firstParentheses + s.substring(endBracket + 1));
+    }
+    let addedParentheses = s;
+    if (s.indexOf('*')>=0) {
+        addedParentheses = R.replace(/(?!\()(([0-9]+\+)+[0-9]+)(?!\))/g, '(\$1)', s);
+    }
+    console.log("Evaluating " + addedParentheses);
+    const {number: firstOperand, remaining} = takeNumber(addedParentheses);
     if (remaining === '') {
         return firstOperand;
     }
@@ -55,8 +66,13 @@ const removeSpaces = R.replace(/ /g, '');
     const test = "1 + 2 * 3 + 4 * 5 + 6";
     // console.log(takeNumber(removeSpaces(test)));
     // console.log(evaluateExpression(removeSpaces(test)));
-    const test2 = "((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2";
-    console.log(evaluateExpression(removeSpaces(test2)));
+    const test2 = "5 + (8 * 3 + 9 + 3 * 4 * 3)";
+    // console.log(evaluateExpression(removeSpaces(test)));
+    // console.log(evaluateExpression(removeSpaces(test2)));
+    console.log(evaluateExpression(removeSpaces("1 + (2 * 3) + (4 * (5 + 6))")));
+    console.log(evaluateExpression(removeSpaces("2 * 3 + (4 * 5)")));
+    console.log(evaluateExpression(removeSpaces("5 + (8 * 3 + 9 + 3 * 4 * 3)")));
+    console.log(evaluateExpression(removeSpaces("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))")));
 
     const part1 = lines.reduce((sum, expression) => {
         return sum + evaluateExpression(removeSpaces(expression));
