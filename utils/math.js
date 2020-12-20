@@ -1,3 +1,5 @@
+import R from "ramda";
+
 export const leastCommonDenominator = numbers => {
     const gcd = (a, b) => {
         return !b ? a : gcd(b, a % b);
@@ -9,3 +11,6 @@ export const leastCommonDenominator = numbers => {
         return lcm(acc, a);
     }, Math.min(...numbers));
 };
+
+export const multiply = R.reduce(R.multiply, 1);
+export const sum = R.reduce(R.add, 0);
