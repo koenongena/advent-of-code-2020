@@ -57,15 +57,20 @@ export const matchesRule = (rules, spec) => {
     };
 };
 
-(async () => {
-    const lines = await readLinesForDay(19);
-
+function parseRulesAndInput(lines) {
     const splitOnNewLines = R.splitWhen(R.equals(''));
     const [ruleSpecifications, input] = splitOnNewLines(lines);
     const rules = R.reduce((m, rule) => {
-        const {id, specification } = mapRule(rule)
+        const {id, specification} = mapRule(rule)
         return m.set(id, specification);
     }, new Map(), ruleSpecifications);
+    return {input, rules};
+}
+
+(async () => {
+    const lines = await readLinesForDay(19);
+
+    const {input, rules} = parseRulesAndInput(lines);
 
     const part1 = R.filter(matchesRule(rules, rules.get(0)), input);
     console.log(part1.length);
