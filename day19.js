@@ -72,13 +72,13 @@ function parseRulesAndInput(lines) {
 
     const {input, rules} = parseRulesAndInput(lines);
 
-    const part1 = R.filter(matchesRule(rules, rules.get(0)), input);
-    console.log(part1.length);
+    const part1 = R.length(R.filter(matchesRule(rules, rules.get(0)), input));
+    console.log(part1);
 
     const adaptedRules = new Map(rules);
     adaptedRules.set(8, "42 | 42 8");
     adaptedRules.set(11, "42 31 | 42 11 31");
 
-    const part2 = R.filter(matchesRule(adaptedRules, adaptedRules.get(0)), input);
-    console.log(part2.length);
+    const part2 = R.length(R.filter(matchesRule(adaptedRules, adaptedRules.get(0)), input));
+    console.log(part2);
 })();
