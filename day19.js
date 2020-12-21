@@ -2,6 +2,8 @@ import {readLinesForDay} from "./fetchFile.js";
 import R from 'ramda';
 import {parseInteger} from "./utils/numbers.js";
 
+const collapseDoubleSpaces = R.pipe(R.trim, R.replace(/ +/g, ' '));
+
 const mapRule = (s) => {
     const [id, specification] = R.split(": ")(s);
     return {id: parseInteger(id), specification: R.replace(/"/g, '', specification)}
@@ -20,6 +22,8 @@ function isNaN(char) {
     return Number.isNaN(parseInt(char, 10));
 }
 
+const isCharacter = s => isNaN(s);
+
 export const matchesRule = (rules, spec) => {
     return (s) => {
         // console.log("Evaluating ", spec);
@@ -34,18 +38,21 @@ export const matchesRule = (rules, spec) => {
             });
         }
 
-        const char = R.split(' ', spec)[0];
-        const dropChar = R.drop(char.length + 1)
-        if (isNaN(char)) {
-            const nextSpec = dropChar(spec);
+        const firstRule = R.split(' ', spec)[0];
+        const dropFirstRule = R.drop(firstRule.length + 1);
+
+        if (isCharacter(firstRule)) {
+            const nextSpec = dropFirstRule(spec);
             const nextString = R.drop(1, s);
-            return R.head(s) === char && matchesRule(rules, nextSpec)(nextString)
+            return R.head(s) === firstRule && matchesRule(rules, nextSpec)(nextString)
         } else {
-            const ruleToInline = findRuleWithId(parseInteger(char), rules);
-            const specs = ruleToInline.split(' | ').map(ss => {
-                return R.replace(/ +/g, ' ', ss + " " + dropChar(spec));
-            })
-            return specs.some(spec2 => matchesRule(rules, spec2)(s));
+            const ruleId = parseInteger(firstRule);
+            const ruleToInline = rules.get(ruleId);
+
+            const inlinedSpec = R.join('|', ruleToInline.split('|').map(is => {
+                return collapseDoubleSpaces(is + " " + dropFirstRule(spec));
+            }))
+            return matchesRule(rules, inlinedSpec)(s);
         }
     };
 };
