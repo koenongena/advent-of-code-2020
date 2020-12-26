@@ -168,6 +168,12 @@ function rowToString(row) {
     }).join("\n");
 }
 
+function puzzleToString(innerTiles) {
+    return R.map(rowToString, innerTiles)
+        .join('\n');
+}
+
+
 (async () => {
     const lines = await readLinesForDay(20);
     const tiles = parseInput(lines);
@@ -186,6 +192,8 @@ function rowToString(row) {
     console.log(part1);
 
     //Part 2
-    const puzzleStringRepresentations = R.map(rowToString, puzzle).join('\n');
+    const removeBorders = (piece) => ({...piece, rows: R.map(R.slice(1, -1), R.slice(1, -1, piece.rows))});
+    const innerTiles = R.map(rowTiles => rowTiles.map(removeBorders), puzzle);
+    const puzzleStringRepresentations = puzzleToString(innerTiles).split('\n');
     console.log(puzzleStringRepresentations);
 })();
