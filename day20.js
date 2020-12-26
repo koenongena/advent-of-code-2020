@@ -144,12 +144,12 @@ const solvePuzzle = pieces => {
     let remainingPieces = duplicatedPieces;
     while (rows.length < dimension) {
         let row = [];
-        const firstCellRowDown = R.isEmpty(rows) ? [R.find(idEquals('3607'), remainingPieces)] : findMatchingDown(remainingPieces, R.head(R.last(rows)));
-        const firstCellRowUp = R.isEmpty(rows) ? [R.find(idEquals('3607'), remainingPieces)] : findMatchingUp(remainingPieces, R.head(R.head(rows)));
+        const firstCellRowDown = R.isEmpty(rows) ? [R.head(remainingPieces)] : findMatchingDown(remainingPieces, R.head(R.last(rows)));
+        const firstCellRowUp = R.isEmpty(rows) ? [R.head(remainingPieces)] : findMatchingUp(remainingPieces, R.head(R.head(rows)));
         if (R.not(R.isEmpty(firstCellRowDown))) {
             row = determineRow(dimension)(remainingPieces, R.head(firstCellRowDown));
             rows.push(row);
-        } else if (R.not(R.isEmpty(firstCellRowDown))) {
+        } else if (R.not(R.isEmpty(firstCellRowUp))) {
             row = determineRow(dimension)(remainingPieces, R.head(firstCellRowUp));
             rows.unshift(row);
         }
@@ -160,6 +160,13 @@ const solvePuzzle = pieces => {
     }
     return rows;
 };
+
+function rowToString(row) {
+    const rowHeight = R.head(row).rows.length;
+    return R.range(0, rowHeight).map(tileIndex => {
+        return row.map(piece => piece.rows[tileIndex]).join('');
+    }).join("\n");
+}
 
 (async () => {
     const lines = await readLinesForDay(20);
@@ -179,4 +186,6 @@ const solvePuzzle = pieces => {
     console.log(part1);
 
     //Part 2
+    const puzzleStringRepresentations = R.map(rowToString, puzzle).join('\n');
+    console.log(puzzleStringRepresentations);
 })();
