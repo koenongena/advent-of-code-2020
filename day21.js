@@ -46,19 +46,20 @@ function linkAllergensToIngredients(input) {
         return {ingredients, allergens}
     }, lines);
 
-    const allAllergens = R.uniq(R.flatten(R.map(R.prop("allergens"), input)));
     const allIngredients = R.uniq(R.flatten(R.map(R.prop("ingredients"), input)));
 
     const allergensToIngredients = linkAllergensToIngredients(input);
     const allergicIngredients = allergensToIngredients.map(R.prop('ingredient'));
-    console.log(allergicIngredients);
     const nonAllergicIngredients = R.reject(s => R.includes(s, allergicIngredients), allIngredients);
-    console.log(nonAllergicIngredients);
+
     const part1 = R.reduce((count, { ingredients }) => {
         return count + R.intersection(nonAllergicIngredients, ingredients).length;
     }, 0, input);
     console.log(part1);
 
-
+    //Part 2
+    const sortedByAllergen = R.sortBy(R.prop('allergen'), allergensToIngredients);
+    const canonicalDangerousIngredientsList = sortedByAllergen.map(R.prop("ingredient")).join(',');
+    console.log(canonicalDangerousIngredientsList);
 
 })();
