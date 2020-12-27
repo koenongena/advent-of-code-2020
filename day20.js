@@ -20,65 +20,52 @@ const parseInput = (lines) => {
 };
 
 
-const flipPieceVertical = (piece) => {
-    const newRows = piece.rows.map(R.reverse);
-    return addBorders({
-        ...piece,
-        rows: newRows
-    })
+const flipVertical = (arr) => {
+    return arr.map(R.reverse);
 };
 
-const flipPieceHorizontal = piece => {
-    return addBorders({
-        ...piece,
-        rows: R.reverse(piece.rows)
-    })
+const flipHorizontal = arr => {
+    return R.reverse(arr);
 };
 
-const column = R.curry((index, piece) => {
-    return R.map(row => row[index], piece.rows).join('');
+const column = R.curry((index, arr) => {
+    return R.map(row => row[index], arr).join('');
 });
-const rotatePiece90Degrees = (piece) => {
-    const newRows = piece.rows.map((row, rowNr) => {
-        return R.reverse(column(rowNr, piece));
-    })
-    return addBorders({
-        ...piece,
-        rows: newRows
-    })
-};
-const rotatePieceClockwise = R.curry((rotation, piece) => {
+const rotateClockwise = R.curry((rotation, arr) => {
     if (rotation === 0) {
-        return piece;
+        return arr;
     }
     if (rotation === 90) {
-        return rotatePiece90Degrees(piece);
+        return arr.map((row, rowNr) => {
+            return R.reverse(column(rowNr, arr));
+        });
     }
 
-    const firstTurn = rotatePieceClockwise(90, piece);
-    return rotatePieceClockwise(rotation - 90, firstTurn)
+    const firstTurn = rotateClockwise(90, arr);
+    return rotateClockwise(rotation - 90, firstTurn)
 })
 
+const calculateBorders = (arr) => {
+    const up = R.head(arr);
+    const left = R.map(R.head, arr).join('');
+    const right = R.map(R.last, arr).join('');
+    const down = R.last(arr);
+
+    return {up, right, down, left};
+}
 const addBorders = piece => {
-    const up = R.head(piece.rows);
-    const left = R.map(R.head, piece.rows).join('');
-    const right = R.map(R.last, piece.rows).join('');
-    const down = R.last(piece.rows);
-
-    const borders = {up, right, down, left};
-
     return {
         ...piece,
-        borders
+        borders: calculateBorders(piece.rows)
     };
 };
 
-const allRotations = (piece) => {
+const allRotations = (arr) => {
     return [
-        rotatePieceClockwise(0, piece),
-        rotatePieceClockwise(90, piece),
-        rotatePieceClockwise(180, piece),
-        rotatePieceClockwise(270, piece),
+        rotateClockwise(0, arr),
+        rotateClockwise(90, arr),
+        rotateClockwise(180, arr),
+        rotateClockwise(270, arr),
     ];
 };
 
@@ -86,17 +73,15 @@ const equalRows = (p1, p2) => {
     return JSON.stringify(p1.rows) === JSON.stringify(p2.rows);
 }
 
-const allTransformations = (piece) => {
-    const rotated = allRotations(piece);
-    return R.uniqWith(equalRows, [
-        ...rotated,
-        ...rotated.map(flipPieceHorizontal),
-        ...rotated.map(flipPieceVertical),
-    ]);
+const allPieceTransformations = (piece) => {
+    const rotatedRows = allRotations(piece.rows);
+    const possibilities = [
+        ...rotatedRows,
+        ...rotatedRows.map(flipHorizontal),
+        ...rotatedRows.map(flipVertical),
+    ].map((rows) => ({...piece, rows, borders: calculateBorders(rows)}))
+    return R.uniqWith(equalRows, possibilities.map(addBorders));
 };
-
-const idEquals = R.curry((id, piece) => piece.id === id);
-
 
 const findMatching = R.curry((fn, remainingPieces, start) => {
     return R.filter(p => fn(p.borders, start.borders) && p.id !== start.id, remainingPieces);
@@ -136,7 +121,7 @@ const determineRow = (dimension) => (pieces, piece) => {
 const solvePuzzle = pieces => {
     const dimension = Math.sqrt(pieces.length);
 
-    const duplicatedPieces = R.flatten(R.map(allTransformations, R.map(p => ({
+    const duplicatedPieces = R.flatten(R.map(allPieceTransformations, R.map(p => ({
         ...p
     }), pieces)));
 
@@ -173,7 +158,20 @@ function puzzleToString(innerTiles) {
         .join('\n');
 }
 
+const formatCoordinate = (row, column) => {
+    return `(${row}, ${column})`;
+}
 
+const findAllMatches = R.curry((regexp, s) => {
+    const r = new RegExp(regexp, 'y');
+    r.lastIndex = 0;
+    const matches = [];
+    for (let i = 0; i < s.length; i++) {
+        regexp.lastIndex = i;
+        matches.push(regexp.exec(s));
+    }
+    return R.filter(s => s, matches);
+});
 (async () => {
     const lines = await readLinesForDay(20);
     const tiles = parseInput(lines);
@@ -194,6 +192,67 @@ function puzzleToString(innerTiles) {
     //Part 2
     const removeBorders = (piece) => ({...piece, rows: R.map(R.slice(1, -1), R.slice(1, -1, piece.rows))});
     const innerTiles = R.map(rowTiles => rowTiles.map(removeBorders), puzzle);
-    const puzzleStringRepresentations = puzzleToString(innerTiles).split('\n');
-    console.log(puzzleStringRepresentations);
+    const puzzleRows = puzzleToString(innerTiles).split('\n');
+
+    const puzzleRotations = allRotations(puzzleRows);
+    const puzzlePossibilities = [
+        ...puzzleRotations,
+        ...puzzleRotations.map(flipHorizontal),
+        ...puzzleRotations.map(flipVertical),
+    ];
+
+    const puzzleMatches = puzzlePossibilities.map(possibility => {
+        const coordinates = possibility.reduce((acc, row, rowNr) => {
+            if (rowNr < 2) {
+                return acc;
+            }
+            const firstRow = possibility[rowNr - 2];
+            const secondRow = possibility[rowNr - 1];
+
+            const lastRowRegExp = new RegExp(/.#..#..#..#..#..#.../, 'g');
+            let lastRowMatch = lastRowRegExp.exec(row);
+            const addToSet = (row, column) => {
+                acc.add([row, column]);
+            }
+            while (lastRowMatch) {
+                const index = lastRowMatch.index;
+                if (R.test(/#....##....##....###/, secondRow.substring(index, index + 20 + 1)) &&
+                    R.test(/..................#./, firstRow.substring(index, index + 20 + 1))
+                ) {
+                    addToSet(rowNr - 2, index + 18);
+                    addToSet(rowNr - 1, index);
+                    addToSet(rowNr - 1, index + 5);
+                    addToSet(rowNr - 1, index + 6);
+                    addToSet(rowNr - 1, index + 11);
+                    addToSet(rowNr - 1, index + 12);
+                    addToSet(rowNr - 1, index + 17);
+                    addToSet(rowNr - 1, index + 18);
+                    addToSet(rowNr - 1, index + 19);
+                    addToSet(rowNr, index + 1);
+                    addToSet(rowNr, index + 4);
+                    addToSet(rowNr, index + 7);
+                    addToSet(rowNr, index + 10);
+                    addToSet(rowNr, index + 13);
+                    addToSet(rowNr, index + 16);
+                }
+                lastRowMatch = lastRowRegExp.exec(row);
+            }
+            return acc;
+        }, new Set());
+        return { puzzle: possibility, coordinates };
+    }).filter(({coordinates}) => coordinates.size > 0);
+
+    const seaMonsterCoordinates = puzzleMatches[0];
+    console.log(seaMonsterCoordinates.puzzle);
+
+    const puzzleWithSeaMonsters = R.reduce((updatedPuzzle, coordinate) => {
+        const [row, column] = coordinate;
+        const updatedRow = updatedPuzzle[row].substring(0, column) + 'O' + updatedPuzzle[row].substring(column + 1);
+
+        return [...updatedPuzzle.slice(0, row), updatedRow ,...updatedPuzzle.slice(row + 1)]
+    }, [...seaMonsterCoordinates.puzzle], seaMonsterCoordinates.coordinates);
+    console.log(puzzleWithSeaMonsters.join('\n'));
+
+    const puzzleCrosses = seaMonsterCoordinates.puzzle.join('\n').match(/#/g).length;
+    console.log(puzzleCrosses - seaMonsterCoordinates.coordinates.size);
 })();
