@@ -28,16 +28,17 @@ const flipHorizontal = arr => {
     return R.reverse(arr);
 };
 
-const column = R.curry((index, arr) => {
+const getColumn = R.curry((index, arr) => {
     return R.map(row => row[index], arr).join('');
 });
+
 const rotateClockwise = R.curry((rotation, arr) => {
     if (rotation === 0) {
         return arr;
     }
     if (rotation === 90) {
         return arr.map((row, rowNr) => {
-            return R.reverse(column(rowNr, arr));
+            return R.reverse(getColumn(rowNr, arr));
         });
     }
 
@@ -53,6 +54,7 @@ const calculateBorders = (arr) => {
 
     return {up, right, down, left};
 }
+
 const addBorders = piece => {
     return {
         ...piece,
@@ -92,10 +94,6 @@ const findMatchingDown = findMatching((b1, b2) => b1.up === b2.down);
 const findMatchingLeft = findMatching((b1, b2) => b1.right === b2.left);
 const findMatchingRight = findMatching((b1, b2) => b1.left === b2.right);
 
-function pieceToString(piece) {
-    return piece.rows.join("\n");
-}
-
 const reduceRow = R.curry((pieces, row) => {
     const right = findMatchingRight(pieces, R.last(row))
     const left = findMatchingLeft(pieces, R.head(row))
@@ -106,8 +104,6 @@ const reduceRow = R.curry((pieces, row) => {
     }
     return reduceRow(pieces, [...left, ...row, ...right]);
 })
-
-console.log("Huh?");
 
 const determineRow = (dimension) => (pieces, piece) => {
     const startPiece = piece ? piece : R.head(pieces);
@@ -146,21 +142,15 @@ const solvePuzzle = pieces => {
     return rows;
 };
 
-function rowToString(row) {
+const rowToString = row => {
     const rowHeight = R.head(row).rows.length;
     return R.range(0, rowHeight).map(tileIndex => {
         return row.map(piece => piece.rows[tileIndex]).join('');
     }).join("\n");
-}
+};
 
-function puzzleToString(innerTiles) {
-    return R.map(rowToString, innerTiles)
-        .join('\n');
-}
-
-const formatCoordinate = (row, column) => {
-    return `(${row}, ${column})`;
-}
+const puzzleToString = innerTiles => R.map(rowToString, innerTiles)
+    .join('\n');
 
 const findAllMatches = R.curry((regexp, s) => {
     const r = new RegExp(regexp, 'y');
