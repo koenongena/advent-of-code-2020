@@ -171,6 +171,24 @@ const findAllMatches = R.curry((regexp, s) => {
     }
     return R.filter(s => s, matches);
 });
+
+const countSeaMonsters = puzzle => {
+    return puzzle.reduce((count, lastRow, rowNr) => {
+        if (rowNr < 2) {
+            return count;
+        }
+        const allPossibleMatches = findAllMatches(/.#..#..#..#..#..#.../, lastRow);
+
+        return count + allPossibleMatches.filter(match => {
+            const index = match.index;
+            return R.test(/#....##....##....###/, puzzle[rowNr - 1].substring(index, index + 20 + 1)) &&
+                R.test(/..................#./, puzzle[rowNr - 2].substring(index, index + 20 + 1))
+        }).length;
+    }, 0);
+};
+
+const countCrosses = puzzle => puzzle.join('\n').match(/#/g).length;
+
 (async () => {
     const lines = await readLinesForDay(20);
     const tiles = parseInput(lines);
@@ -185,71 +203,24 @@ const findAllMatches = R.curry((regexp, s) => {
     const cornerIds = R.map(R.pipe(R.prop("id"), parseInteger), corners);
 
     const part1 = multiply(cornerIds);
-    console.log(puzzle);
+    console.log("Part 1");
     console.log(part1);
 
     //Part 2
     const removeBorders = (piece) => ({...piece, rows: R.map(R.slice(1, -1), R.slice(1, -1, piece.rows))});
     const innerTiles = R.map(rowTiles => rowTiles.map(removeBorders), puzzle);
-    const puzzleRows = puzzleToString(innerTiles).split('\n');
-
-    const puzzleRotations = allRotations(puzzleRows);
-    const puzzlePossibilities = [
+    const puzzleRotations = allRotations(puzzleToString(innerTiles).split('\n'));
+    const allPossiblePuzzles = [
         ...puzzleRotations,
         ...puzzleRotations.map(flipHorizontal),
         ...puzzleRotations.map(flipVertical),
     ];
 
-    const puzzleMatches = puzzlePossibilities.map(possibility => {
-        const coordinates = possibility.reduce((acc, row, rowNr) => {
-            if (rowNr < 2) {
-                return acc;
-            }
-            const firstRow = possibility[rowNr - 2];
-            const secondRow = possibility[rowNr - 1];
+    const puzzleWithSeaMonsters = R.head(allPossiblePuzzles.map(possibility => {
+        return {puzzle: possibility, count: countSeaMonsters(possibility)};
+    }).filter(({count}) => count > 0));
 
-            const allLastRowMatches = findAllMatches(/.#..#..#..#..#..#.../, row);
-            const addToSet = (row, column) => {
-                acc.add([row, column]);
-            }
-            allLastRowMatches.forEach(lastRowMatch => {
-                const index = lastRowMatch.index;
-                if (R.test(/#....##....##....###/, secondRow.substring(index, index + 20 + 1)) &&
-                    R.test(/..................#./, firstRow.substring(index, index + 20 + 1))
-                ) {
-                    addToSet(rowNr - 2, index + 18);
-                    addToSet(rowNr - 1, index);
-                    addToSet(rowNr - 1, index + 5);
-                    addToSet(rowNr - 1, index + 6);
-                    addToSet(rowNr - 1, index + 11);
-                    addToSet(rowNr - 1, index + 12);
-                    addToSet(rowNr - 1, index + 17);
-                    addToSet(rowNr - 1, index + 18);
-                    addToSet(rowNr - 1, index + 19);
-                    addToSet(rowNr, index + 1);
-                    addToSet(rowNr, index + 4);
-                    addToSet(rowNr, index + 7);
-                    addToSet(rowNr, index + 10);
-                    addToSet(rowNr, index + 13);
-                    addToSet(rowNr, index + 16);
-                }
-            })
-            return acc;
-        }, new Set());
-        return {puzzle: possibility, coordinates};
-    }).filter(({coordinates}) => coordinates.size > 0);
-
-    const seaMonsterCoordinates = puzzleMatches[0];
-    console.log(seaMonsterCoordinates.puzzle);
-
-    const puzzleWithSeaMonsters = R.reduce((updatedPuzzle, coordinate) => {
-        const [row, column] = coordinate;
-        const updatedRow = updatedPuzzle[row].substring(0, column) + 'O' + updatedPuzzle[row].substring(column + 1);
-
-        return [...updatedPuzzle.slice(0, row), updatedRow, ...updatedPuzzle.slice(row + 1)]
-    }, [...seaMonsterCoordinates.puzzle], seaMonsterCoordinates.coordinates);
-    console.log(puzzleWithSeaMonsters.join('\n'));
-
-    const puzzleCrosses = seaMonsterCoordinates.puzzle.join('\n').match(/#/g).length;
-    console.log(puzzleCrosses - seaMonsterCoordinates.coordinates.size);
+    const NUMBER_OF_CROSSES_IN_SEA_MONSTER = 15;
+    console.log("Part 2");
+    console.log(countCrosses(puzzleWithSeaMonsters.puzzle) - puzzleWithSeaMonsters.count * NUMBER_OF_CROSSES_IN_SEA_MONSTER);
 })();
