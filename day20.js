@@ -164,11 +164,10 @@ const formatCoordinate = (row, column) => {
 
 const findAllMatches = R.curry((regexp, s) => {
     const r = new RegExp(regexp, 'y');
-    r.lastIndex = 0;
     const matches = [];
     for (let i = 0; i < s.length; i++) {
-        regexp.lastIndex = i;
-        matches.push(regexp.exec(s));
+        r.lastIndex = i;
+        matches.push(r.exec(s));
     }
     return R.filter(s => s, matches);
 });
@@ -209,12 +208,11 @@ const findAllMatches = R.curry((regexp, s) => {
             const firstRow = possibility[rowNr - 2];
             const secondRow = possibility[rowNr - 1];
 
-            const lastRowRegExp = new RegExp(/.#..#..#..#..#..#.../, 'g');
-            let lastRowMatch = lastRowRegExp.exec(row);
+            const allLastRowMatches = findAllMatches(/.#..#..#..#..#..#.../, row);
             const addToSet = (row, column) => {
                 acc.add([row, column]);
             }
-            while (lastRowMatch) {
+            allLastRowMatches.forEach(lastRowMatch => {
                 const index = lastRowMatch.index;
                 if (R.test(/#....##....##....###/, secondRow.substring(index, index + 20 + 1)) &&
                     R.test(/..................#./, firstRow.substring(index, index + 20 + 1))
@@ -235,11 +233,10 @@ const findAllMatches = R.curry((regexp, s) => {
                     addToSet(rowNr, index + 13);
                     addToSet(rowNr, index + 16);
                 }
-                lastRowMatch = lastRowRegExp.exec(row);
-            }
+            })
             return acc;
         }, new Set());
-        return { puzzle: possibility, coordinates };
+        return {puzzle: possibility, coordinates};
     }).filter(({coordinates}) => coordinates.size > 0);
 
     const seaMonsterCoordinates = puzzleMatches[0];
@@ -249,7 +246,7 @@ const findAllMatches = R.curry((regexp, s) => {
         const [row, column] = coordinate;
         const updatedRow = updatedPuzzle[row].substring(0, column) + 'O' + updatedPuzzle[row].substring(column + 1);
 
-        return [...updatedPuzzle.slice(0, row), updatedRow ,...updatedPuzzle.slice(row + 1)]
+        return [...updatedPuzzle.slice(0, row), updatedRow, ...updatedPuzzle.slice(row + 1)]
     }, [...seaMonsterCoordinates.puzzle], seaMonsterCoordinates.coordinates);
     console.log(puzzleWithSeaMonsters.join('\n'));
 
