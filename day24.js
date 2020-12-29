@@ -68,11 +68,10 @@ function getAdjacentCoordinates(coordinate) {
 
 const getAdjacentTiles = R.curry((floor, tile) => {
     const adjacentCoordinates = getAdjacentCoordinates(tile.coordinate);
-    return R.reduce((adjacentTiles, coordinate) => {
+    return R.map((coordinate) => {
         const knowTile = floor.get(JSON.stringify(coordinate));
-        const adjacentTile = (knowTile ? knowTile : ({coordinate, color: 'white'}));
-        return [...adjacentTiles, adjacentTile];
-    }, [], adjacentCoordinates)
+        return (knowTile ? knowTile : ({coordinate, color: 'white'}));
+    }, adjacentCoordinates)
 });
 
 const buildFloor = tilesMap => {
@@ -123,9 +122,11 @@ const determineNextColor = (floor) => tile => {
             return map;
         }, new Map(), tiles);
         const blackAdjacentTiles = R.flatten(R.map(getAdjacentTiles(tilesMap), blackTiles));
-        const eqTile = ((t1, t2) => t1.coordinate.w === t2.coordinate.w && t1.coordinate.h === t2.coordinate.h);
-
-        const tilesToVerify = R.uniqWith(eqTile, [...blackTiles, ...blackAdjacentTiles]);
+        const tilesToVerify = Array.from([...blackTiles, ...blackAdjacentTiles].reduce((map, tile) => {
+            map.set(JSON.stringify(tile.coordinate), tile);
+            return map;
+        }, new Map()).values());
+        
         R.forEach(determineNextColor(tilesMap), tilesToVerify);
         R.forEach(tile => tile.color = tile.nextColor, tilesToVerify);
         return tilesToVerify;
