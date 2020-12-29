@@ -1,5 +1,27 @@
-import {readLinesForDay} from "./fetchFile.js";
 import R from 'ramda';
+import {readLinesForDay} from "./fetchFile.js";
+
+const sampleLines = `sesenwnenenewseeswwswswwnenewsewsw
+neeenesenwnwwswnenewnwwsewnenwseswesw
+seswneswswsenwwnwse
+nwnwneseeswswnenewneswwnewseswneseene
+swweswneswnenwsewnwneneseenw
+eesenwseswswnenwswnwnwsewwnwsene
+sewnenenenesenwsewnenwwwse
+wenwwweseeeweswwwnwwe
+wsweesenenewnwwnwsenewsenwwsesesenwne
+neeswseenwwswnwswswnw
+nenwswwsewswnenenewsenwsenwnesesenew
+enewnwewneswsewnwswenweswnenwsenwsw
+sweneswneswneneenwnewenewwneswswnese
+swwesenesewenwneswnwwneseswwne
+enesenwswwswneneswsenwnewswseenwsese
+wnwnesenesenenwwnenwsewesewsesesew
+nenewswnwewswnenesenwnesewesw
+eneswnwswnwsenenwnwnwwseeswneewsenese
+neswnwewnwnwseenwseesewsenwsweewe
+wseweeenwnesenwwwswnew`.split('\n');
+
 
 const getNextInstruction = (instructions) => {
     if (['se', 'sw', 'nw', 'ne'].some(s => instructions.startsWith(s))) {
@@ -33,8 +55,48 @@ const getCoordinate = (instructions) => {
     return endResult.position;
 };
 
+function getAdjacentCoordinates(coordinate) {
+    return [
+        {w: coordinate.w - 0.5, h: coordinate.h - 0.75},
+        {w: coordinate.w + 0.5, h: coordinate.h - 0.75},
+        {w: coordinate.w - 1, h: coordinate.h},
+        {w: coordinate.w + 1, h: coordinate.h},
+        {w: coordinate.w - 0.5, h: coordinate.h + 0.75},
+        {w: coordinate.w + 0.5, h: coordinate.h + 0.75},
+    ];
+}
+
+const getAdjacentTiles = R.curry((floor, tile) => {
+    const adjacentCoordinates = getAdjacentCoordinates(tile.coordinate);
+    return R.reduce((adjacentTiles, coordinate) => {
+        const knowTile = R.find((tile) => JSON.stringify(tile.coordinate) === JSON.stringify(coordinate))(floor);
+        const adjacentTile = (knowTile ? knowTile : ({coordinate, color: 'white'}));
+        return [...adjacentTiles, adjacentTile];
+    }, [], adjacentCoordinates)
+});
+
+const buildFloor = tilesMap => {
+    return R.map(s => ({
+        coordinate: JSON.parse(s),
+        color: tilesMap.get(s),
+    }), Array.from(tilesMap.keys()));
+};
+
+const determineNextColor = (floor) => tile => {
+    const adjacentTiles = getAdjacentTiles(floor, tile);
+    const adjacentBlackTiles = adjacentTiles.filter(tile => tile.color === 'black').length;
+    if (tile.color === 'black' && (adjacentBlackTiles === 0 || adjacentBlackTiles > 2)) {
+        tile.nextColor = 'white';
+    } else if (tile.color === 'white' && adjacentBlackTiles === 2) {
+        tile.nextColor = 'black';
+    } else {
+        tile.nextColor = tile.color;
+    }
+};
+
 (async () => {
     const lines = await readLinesForDay(24);
+    // const lines = sampleLines;
 
     const tiles = R.reduce((tiles, line) => {
         const c = getCoordinate(line);
@@ -47,27 +109,28 @@ const getCoordinate = (instructions) => {
         return tiles;
     }, new Map(), lines);
 
-    console.log(Array.from(tiles.values()).filter(i => i === 'black').length);
+    const floor = buildFloor(tiles);
+    const isBlackTile = i => i.color === 'black';
+    console.log(R.filter(isBlackTile, floor).length);
+    // console.log(tiles)
+    //part 2
 
+
+    const flipAllTiles = (tiles) => {
+        const blackTiles = R.filter(isBlackTile, tiles);
+        const blackAdjacentTiles = R.flatten(R.map(getAdjacentTiles(tiles), blackTiles));
+        const eqTile = ((t1, t2) => t1.coordinate.w === t2.coordinate.w && t1.coordinate.h === t2.coordinate.h);
+
+        const tilesToVerify = R.uniqWith(eqTile, [...blackTiles, ...blackAdjacentTiles]);
+        R.forEach(determineNextColor(tiles), tilesToVerify);
+        R.forEach(tile => tile.color = tile.nextColor, tilesToVerify);
+        return tilesToVerify;
+    }
+
+    const untilIndex = R.addIndex(R.until);
+    const bla = untilIndex((_, index) => {
+        console.log("Running ", index);
+        return index === 100;
+    }, flipAllTiles, floor);
+    console.log(R.filter(isBlackTile, bla).length);
 })();
-
-const sampleLines = `sesenwnenenewseeswwswswwnenewsewsw
-neeenesenwnwwswnenewnwwsewnenwseswesw
-seswneswswsenwwnwse
-nwnwneseeswswnenewneswwnewseswneseene
-swweswneswnenwsewnwneneseenw
-eesenwseswswnenwswnwnwsewwnwsene
-sewnenenenesenwsewnenwwwse
-wenwwweseeeweswwwnwwe
-wsweesenenewnwwnwsenewsenwwsesesenwne
-neeswseenwwswnwswswnw
-nenwswwsewswnenenewsenwsenwnesesenew
-enewnwewneswsewnwswenweswnenwsenwsw
-sweneswneswneneenwnewenewwneswswnese
-swwesenesewenwneswnwwneseswwne
-enesenwswwswneneswsenwnewswseenwsese
-wnwnesenesenenwwnenwsewesewsesesew
-nenewswnwewswnenesenwnesewesw
-eneswnwswnwsenenwnwnwwseeswneewsenese
-neswnwewnwnwseenwseesewsenwsweewe
-wseweeenwnesenwwwswnew`.split('\n');
