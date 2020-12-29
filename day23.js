@@ -1,52 +1,72 @@
 import {parseInteger} from "./utils/numbers.js";
 import R from 'ramda';
 
-const pickup = (amount) => (input) => {
-    const {cups} = input;
 
-    return {...input, 'pick up': R.slice(1, 1 + amount, cups), cups: [R.head(cups), ...R.drop(1 + amount, cups)]}
+const pickup = (amount) => (input) => {
+    const {cups, current} = input;
+
+    const currentCup = cups[current];
+    const firstNextCup = cups[currentCup.next];
+    const secondNextCup = cups[firstNextCup.next];
+    const thirdNextNextCup = cups[secondNextCup.next];
+    const fourthNextNextCup = cups[thirdNextNextCup.next];
+
+    currentCup.next = fourthNextNextCup.id;
+    fourthNextNextCup.prev = currentCup.id;
+
+    firstNextCup.prev = undefined;
+    thirdNextNextCup.next = undefined;
+    return {...input, 'pick up': [firstNextCup, secondNextCup, thirdNextNextCup], cups: cups}
 };
 
 const addDestinationCup = input => {
-    const {cups} = input;
-    const current = R.head(cups);
-    const sorted = R.sortBy(R.identity, cups);
-    const destinationIndex = R.findIndex(R.equals(current), sorted) - 1;
-    if (destinationIndex >= 0) {
-        return {...input, destination: sorted[destinationIndex]}
-    }
+    const {current, cups} = input;
+    const pickedUpCups = input['pick up'];
 
-    return {...input, destination: R.last(sorted)};
+    const minusOne = (cups) => (l) => l <= 1 ? cups.length - 1: l - 1;
+    const notPickedUp = (pickedUpCups) => {
+        const pickedUpIds = R.map(R.prop("id"), pickedUpCups);
+        return (newLabel) => newLabel > 0 && !R.includes(newLabel, pickedUpIds);
+    }
+    const destination = R.until(notPickedUp(pickedUpCups), minusOne(cups), current - 1);
+    return {
+        ...input,
+        destination
+    }
 };
 
 const placePickup = (input) => {
-    const destinationIndex = R.findIndex(R.equals(input.destination), input.cups);
+    const pickedUpCups = input['pick up'];
+    const {cups, destination} = input;
 
-    return {
-        ...input,
-        'pick up': [],
-        cups: [...input.cups.slice(0, destinationIndex + 1), ...input['pick up'], ...input.cups.slice(destinationIndex + 1)]
-    }
-}
+    pickedUpCups[2].next = cups[destination].next;
+    cups[destination].next = pickedUpCups[0].id;
 
-const moveToTop = (label) => (cups) => {
-    const shiftIndex = R.findIndex(R.equals(label), cups);
-    return [...R.slice(shiftIndex, Infinity, cups), ...R.slice(0, shiftIndex, cups)]
+    return input;
 }
 
 const chooseNewCurrentCup = (input) => {
-    const {cups} = input;
+    const {cups, current} = input;
 
     return {
         ...input,
-        cups: moveToTop(cups[1])(cups)
+        current: cups[current].next
     }
 }
 
-const printMoveResult = (input) => {
-    console.log("After move " + input.move + " we have:")
-    console.log(input.cups.join(' '))
-    return input;
+const printMoveResult = (startLabel) => (input) => {
+    let cup = input.cups[startLabel];
+    let s = "";
+    for (let i = 0; i < input.cups.length - 1; i++) {
+        if (cup.id === input.current) {
+            s += " (" + cup.id + ")";
+        } else {
+            s += " " + cup.id;
+        }
+        cup = input.cups[cup.next];
+    }
+    console.log(s);
+    return input
 }
 
 const incrementMove = (input) => {
@@ -55,15 +75,31 @@ const incrementMove = (input) => {
         move: input.move + 1
     }
 }
+
+const createLinkedList = labels => {
+    const max = Math.max(...labels);
+    const last = R.last(labels);
+    const first = R.head(labels);
+    const reduceIndexed = R.addIndex(R.reduce);
+    return reduceIndexed((list, label, index) => {
+        list[label] = {
+            id: label,
+            prev: index === 0 ? last : labels[index - 1],
+            next: index === labels.length - 1 ? first : labels[index + 1]
+        };
+        return list;
+    }, new Array(max + 1), labels)
+};
+
 (async () => {
-    const labels = [...('389125467')].map(parseInteger);
+    const input = '487912365';
+
     const pickupThree = pickup(3);
+    const cups = createLinkedList([...input].map(parseInteger));
 
-    const executeMove = R.pipe(incrementMove, pickupThree, addDestinationCup, placePickup, chooseNewCurrentCup, printMoveResult);
+    const executeMove = R.pipe(incrementMove, pickupThree, addDestinationCup, placePickup, chooseNewCurrentCup);
 
-    const result = R.until((i) => i.move === 100, executeMove, {cups: labels, move: 0});
+    const result = R.until((i) => i.move === 100, executeMove, {cups: cups, move: 0, current: R.head([...input].map(parseInteger))});
 
-    const part1 = R.join('', await R.drop(1, await moveToTop(1)(result.cups)));
-
-    console.log(part1);
+    printMoveResult(1)(result);
 })();
