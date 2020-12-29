@@ -69,7 +69,7 @@ function getAdjacentCoordinates(coordinate) {
 const getAdjacentTiles = R.curry((floor, tile) => {
     const adjacentCoordinates = getAdjacentCoordinates(tile.coordinate);
     return R.reduce((adjacentTiles, coordinate) => {
-        const knowTile = R.find((tile) => JSON.stringify(tile.coordinate) === JSON.stringify(coordinate))(floor);
+        const knowTile = floor.get(JSON.stringify(coordinate));
         const adjacentTile = (knowTile ? knowTile : ({coordinate, color: 'white'}));
         return [...adjacentTiles, adjacentTile];
     }, [], adjacentCoordinates)
@@ -118,11 +118,15 @@ const determineNextColor = (floor) => tile => {
 
     const flipAllTiles = (tiles) => {
         const blackTiles = R.filter(isBlackTile, tiles);
-        const blackAdjacentTiles = R.flatten(R.map(getAdjacentTiles(tiles), blackTiles));
+        const tilesMap = R.reduce((map, tile) => {
+            map.set(JSON.stringify(tile.coordinate), tile);
+            return map;
+        }, new Map(), tiles);
+        const blackAdjacentTiles = R.flatten(R.map(getAdjacentTiles(tilesMap), blackTiles));
         const eqTile = ((t1, t2) => t1.coordinate.w === t2.coordinate.w && t1.coordinate.h === t2.coordinate.h);
 
         const tilesToVerify = R.uniqWith(eqTile, [...blackTiles, ...blackAdjacentTiles]);
-        R.forEach(determineNextColor(tiles), tilesToVerify);
+        R.forEach(determineNextColor(tilesMap), tilesToVerify);
         R.forEach(tile => tile.color = tile.nextColor, tilesToVerify);
         return tilesToVerify;
     }
