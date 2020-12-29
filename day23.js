@@ -2,7 +2,7 @@ import {parseInteger} from "./utils/numbers.js";
 import R from 'ramda';
 
 
-const pickup = (amount) => (input) => {
+const pickup = (input) => {
     const {cups, current} = input;
 
     const currentCup = cups[current];
@@ -90,10 +90,9 @@ const createLinkedList = labels => {
 (async () => {
     const input = '487912365';
 
-    const pickupThree = pickup(3);
     const cups = createLinkedList([...input].map(parseInteger));
 
-    const executeMove = R.pipe(incrementMove, pickupThree, addDestinationCup, placePickup, chooseNewCurrentCup);
+    const executeMove = R.pipe(incrementMove, pickup, addDestinationCup, placePickup, chooseNewCurrentCup);
 
     //part 1
     const part1 = R.until((i) => i.move === 100, executeMove, {
